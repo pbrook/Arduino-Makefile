@@ -488,7 +488,7 @@ endif
 
 CORE_OBJ_FILES  = $(CORE_C_SRCS:.c=.o) $(CORE_CPP_SRCS:.cpp=.o)
 CORE_OBJS       = $(patsubst $(ARDUINO_CORE_PATH)/%,  \
-			$(OBJDIR)/%,$(CORE_OBJ_FILES))
+			$(OBJDIR)/core/%,$(CORE_OBJ_FILES))
 endif
 endif
 
@@ -590,10 +590,10 @@ $(OBJDIR)/%.o: %.ino
 	$(CXX) -x c++ -include Arduino.h -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 # core files
-$(OBJDIR)/%.o: $(ARDUINO_CORE_PATH)/%.c
+$(OBJDIR)/core/%.o: $(ARDUINO_CORE_PATH)/%.c
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
-$(OBJDIR)/%.o: $(ARDUINO_CORE_PATH)/%.cpp
+$(OBJDIR)/core/%.o: $(ARDUINO_CORE_PATH)/%.cpp
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 # various object conversions
@@ -646,7 +646,7 @@ $(CORE_LIB):	$(CORE_OBJS) $(LIB_OBJS) $(USER_LIB_OBJS)
 		$(AR) rcs $@ $(CORE_OBJS) $(LIB_OBJS) $(USER_LIB_OBJS)
 
 $(OBJDIR_STAMP):
-		mkdir -p $(OBJDIR) $(patsubst %,$(OBJDIR)/libs/%,$(ARDUINO_LIBS))
+		mkdir -p $(OBJDIR) $(OBJDIR)/core $(patsubst %,$(OBJDIR)/libs/%,$(ARDUINO_LIBS))
 		touch $@
 
 upload:		reset raw_upload
