@@ -388,18 +388,29 @@ ifndef PARSE_BOARD_CMD
 PARSE_BOARD_CMD = $(PARSE_BOARD) $(PARSE_BOARD_OPTS)
 endif
 
-# Which variant ? This affects the include path
-ifndef VARIANT
-VARIANT = $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.variant)
+world: all
+
+# Everything gets built in here (include BOARD_TAG now)
+ifndef OBJDIR
+OBJDIR  	  = build-$(BOARD_TAG)
 endif
 
+BOARD_MK = $(OBJDIR)/board.mk
+
+-include $(BOARD_MK)
+
+# Which variant ? This affects the include path
+ifndef VARIANT
+VARIANT := $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.variant)
+endif
+ 
 # processor stuff
 ifndef MCU
-MCU   = $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.mcu)
+MCU   := $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.mcu)
 endif
 
 ifndef F_CPU
-F_CPU = $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.f_cpu)
+F_CPU := $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.f_cpu)
 endif
 
 # USB IDs for the Leonardo
@@ -410,6 +421,12 @@ endif
 ifndef USB_PID
 USB_PID = $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.pid)
 endif
+
+$(BOARD_MK): $(OBJDIR)
+	( echo VARIANT ?= $(VARIANT) ; \
+	  echo MCU ?= $(MCU) ; \
+	  echo F_CPU ?= $(F_CPU) ; \
+	) > $@
 
 # normal programming info
 ifndef AVRDUDE_ARD_PROGRAMMER
@@ -439,11 +456,6 @@ endif
 
 ifndef ISP_EXT_FUSE
 ISP_EXT_FUSE       = $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) bootloader.extended_fuses)
-endif
-
-# Everything gets built in here (include BOARD_TAG now)
-ifndef OBJDIR
-OBJDIR  	  = build-$(BOARD_TAG)
 endif
 
 ########################################################################
