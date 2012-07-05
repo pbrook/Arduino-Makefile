@@ -416,17 +416,19 @@ endif
 
 # USB IDs for the Leonardo
 ifndef USB_VID
-USB_VID = $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.vid)
+USB_VID := $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.vid 2>/dev/null)
 endif
 
 ifndef USB_PID
-USB_PID = $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.pid)
+USB_PID := $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.pid 2>/dev/null)
 endif
 
 $(BOARD_MK): $(OBJDIR_STAMP)
 	( echo VARIANT ?= $(VARIANT) ; \
 	  echo MCU ?= $(MCU) ; \
 	  echo F_CPU ?= $(F_CPU) ; \
+	  echo USB_VID ?= $(USB_VID) ; \
+	  echo USB_PID ?= $(USB_PID) ; \
 	) > $@
 
 # normal programming info
@@ -531,9 +533,9 @@ USER_LIB_OBJS = $(patsubst $(USER_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(USER_LIB_
 		$(patsubst $(USER_LIB_PATH)/%.c,$(OBJDIR)/libs/%.o,$(USER_LIB_C_SRCS))
 
 CPPFLAGS      = -mmcu=$(MCU) -DF_CPU=$(F_CPU) -DARDUINO=$(ARDUINO_VERSION) \
+			-DUSB_VID=$(USB_VID) -DUSB_PID=$(USB_PID) \
 			-I. -I$(ARDUINO_CORE_PATH) -I$(ARDUINO_VAR_PATH)/$(VARIANT) \
 			$(SYS_INCLUDES) $(USER_INCLUDES) -g -Os -w -Wall \
-			-DUSB_VID=$(USB_VID) -DUSB_PID=$(USB_PID) \
 			-ffunction-sections -fdata-sections
 
 CFLAGS        = -std=gnu99
