@@ -293,6 +293,7 @@ endif
 ########################################################################
 # Arduino and system paths
 #
+ARDUINO_DIR ?= /usr/share/arduino
 ifdef ARDUINO_DIR
 
 ifndef AVR_TOOLS_DIR
