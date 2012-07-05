@@ -394,7 +394,7 @@ world: all
 ifndef OBJDIR
 OBJDIR  	  = build-$(BOARD_TAG)
 endif
-OBJDIR_STAMP = $(OBJDIR)/stamp
+OBJDIR_STAMP = $(OBJDIR)/dir-stamp
 
 BOARD_MK = $(OBJDIR)/board.mk
 
@@ -519,8 +519,13 @@ CAT     = cat
 ECHO    = echo
 
 # General arguments
-SYS_LIBS      = $(patsubst %,$(ARDUINO_LIB_PATH)/%,$(ARDUINO_LIBS))
-USER_LIBS     = $(patsubst %,$(USER_LIB_PATH)/%,$(ARDUINO_LIBS))
+# For backward comptibility filter out explicit Lib/utility
+FILTERED_LIBS = $(filter-out %/utility,$(ARDUINO_LIBS))
+lib_maybe_utility = $(wildcard $(1) $(addsuffix /utility,$(1)))
+SYS_LIBS      = $(call lib_maybe_utility,$(patsubst %,$(ARDUINO_LIB_PATH)/%,$(FILTERED_LIBS)))
+USER_LIBS     = $(call lib_maybe_utility,$(patsubst %,$(USER_LIB_PATH)/%,$(FILTERED_LIBS)))
+BUILD_LIBS    = $(patsubst $(ARDUINO_LIB_PATH)/%,%,$(SYS_LIBS)) \
+    		$(patsubst $(USER_LIB_PATH)/%,%,$(USER_LIBS))
 SYS_INCLUDES  = $(patsubst %,-I%,$(SYS_LIBS))
 USER_INCLUDES = $(patsubst %,-I%,$(USER_LIBS))
 LIB_C_SRCS    = $(wildcard $(patsubst %,%/*.c,$(SYS_LIBS)))
@@ -535,9 +540,9 @@ USER_LIB_OBJS = $(patsubst $(USER_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(USER_LIB_
 CPPFLAGS      = -mmcu=$(MCU) -DF_CPU=$(F_CPU) -DARDUINO=$(ARDUINO_VERSION) \
 			-DUSB_VID=$(USB_VID) -DUSB_PID=$(USB_PID) \
 			-I. -I$(ARDUINO_CORE_PATH) -I$(ARDUINO_VAR_PATH)/$(VARIANT) \
-			$(SYS_INCLUDES) $(USER_INCLUDES) -g -Os -w -Wall \
+			-g -Os -w -Wall \
 			-ffunction-sections -fdata-sections
-
+LOCAL_CPPFLAGS= $(CPPFLAGS) $(filter-out %/utility,$(SYS_INCLUDES) $(USER_INCLUDES))
 CFLAGS        = -std=gnu99
 CXXFLAGS      = -fno-exceptions
 ASFLAGS       = -mmcu=$(MCU) -I. -x assembler-with-cpp
@@ -554,42 +559,45 @@ ARD_PORT      = $(firstword $(wildcard $(ARDUINO_PORT)))
 # file. Besides making things simpler now, this would also make it
 # easy to change the build options in future
 
+get_lib_include = $(addprefix -I,$(call lib_maybe_utility,$(1)/$(notdir $(patsubst %/utility,%,$(patsubst %/,%,$(dir $(2)))))))
+USER_LIB_CPPFLAGS = $(CPPFLAGS) $(call get_lib_include,$(USER_LIB_PATH),$@)
+ARDUINO_LIB_CPPFLAGS = $(CPPFLAGS) $(call get_lib_include,$(ARDUINO_LIB_PATH),$@)
 # library sources
 $(OBJDIR)/libs/%.o: $(ARDUINO_LIB_PATH)/%.c
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(CC) -c $(ARDUINO_LIB_CPPFLAGS) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/libs/%.o: $(ARDUINO_LIB_PATH)/%.cpp
-	$(CC) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CC) -c $(ARDUINO_LIB_CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.cpp
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(CC) -c $(USER_LIB_CPPFLAGS) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.c
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(CC) -c $(USER_LIB_CPPFLAGS) $(CFLAGS) $< -o $@
 
 # normal local sources
 # .o rules are for objects, .d for dependency tracking
 # there seems to be an awful lot of duplication here!!!
 $(OBJDIR)/%.o: %.c
-	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(CC) -MMD -c $(LOCAL_CPPFLAGS) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.cc
-	$(CXX) -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -MMD -c $(LOCAL_CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.cpp
-	$(CXX) -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -MMD -c $(LOCAL_CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.S
-	$(CC) -MMD -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
+	$(CC) -MMD -c $(LOCAL_CPPFLAGS) $(ASFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.s
-	$(CC) -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
+	$(CC) -c $(LOCAL_CPPFLAGS) $(ASFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.pde
-	$(CXX) -x c++ -include WProgram.h -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -x c++ -include WProgram.h -MMD -c $(LOCAL_CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.ino
-	$(CXX) -x c++ -include Arduino.h -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -x c++ -include Arduino.h -MMD -c $(LOCAL_CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 # core files
 $(OBJDIR)/core/%.o: $(ARDUINO_CORE_PATH)/%.c
@@ -647,8 +655,10 @@ $(TARGET_ELF): 	$(LOCAL_OBJS) $(CORE_LIB) $(OTHER_OBJS)
 $(CORE_LIB):	$(CORE_OBJS) $(LIB_OBJS) $(USER_LIB_OBJS)
 		$(AR) rcs $@ $(CORE_OBJS) $(LIB_OBJS) $(USER_LIB_OBJS)
 
-$(OBJDIR_STAMP):
-		mkdir -p $(OBJDIR) $(OBJDIR)/core $(patsubst %,$(OBJDIR)/libs/%,$(ARDUINO_LIBS))
+$(OBJDIR_STAMP): $(patsubst %,$(OBJDIR)/%/dir-stamp,core $(addprefix libs/,$(BUILD_LIBS)))
+
+%/dir-stamp:
+		mkdir -p $(dir $@)
 		touch $@
 
 upload:		reset raw_upload
