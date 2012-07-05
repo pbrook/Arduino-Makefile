@@ -503,9 +503,6 @@ TARGET_ELF = $(OBJDIR)/$(TARGET).elf
 TARGETS    = $(OBJDIR)/$(TARGET).*
 CORE_LIB   = $(OBJDIR)/libcore.a
 
-# A list of dependencies
-DEP_FILE   = $(OBJDIR)/depends.mk
-
 # Names of executables
 CC      = $(AVR_TOOLS_PATH)/avr-gcc
 CXX     = $(AVR_TOOLS_PATH)/avr-g++
@@ -572,46 +569,25 @@ $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.c
 # .o rules are for objects, .d for dependency tracking
 # there seems to be an awful lot of duplication here!!!
 $(OBJDIR)/%.o: %.c
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.cc
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.cpp
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.S
-	$(CC) -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
+	$(CC) -MMD -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.s
 	$(CC) -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
 
-$(OBJDIR)/%.d: %.c
-	$(CC) -MM $(CPPFLAGS) $(CFLAGS) $< -MF $@ -MT $(@:.d=.o)
-
-$(OBJDIR)/%.d: %.cc
-	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
-
-$(OBJDIR)/%.d: %.cpp
-	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
-
-$(OBJDIR)/%.d: %.S
-	$(CC) -MM $(CPPFLAGS) $(ASFLAGS) $< -MF $@ -MT $(@:.d=.o)
-
-$(OBJDIR)/%.d: %.s
-	$(CC) -MM $(CPPFLAGS) $(ASFLAGS) $< -MF $@ -MT $(@:.d=.o)
-
 $(OBJDIR)/%.o: %.pde
-	$(CXX) -x c++ -include WProgram.h -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
-
-$(OBJDIR)/%.d: %.pde
-	$(CXX) -x c++ -include WProgram.h -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
+	$(CXX) -x c++ -include WProgram.h -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.ino
-	$(CXX) -x c++ -include Arduino.h -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
-
-$(OBJDIR)/%.d: %.ino
-	$(CXX) -x c++ -include Arduino.h -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
+	$(CXX) -x c++ -include Arduino.h -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 # core files
 $(OBJDIR)/%.o: $(ARDUINO_CORE_PATH)/%.c
@@ -673,9 +649,6 @@ $(OBJDIR_STAMP):
 		mkdir -p $(OBJDIR) $(patsubst %,$(OBJDIR)/libs/%,$(ARDUINO_LIBS))
 		touch $@
 
-$(DEP_FILE):	$(OBJDIR_STAMP) $(DEPS)
-		cat $(DEPS) > $(DEP_FILE)
-
 upload:		reset raw_upload
 
 raw_upload:	$(TARGET_HEX)
@@ -707,12 +680,11 @@ ispload:	$(TARGET_HEX)
 		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) \
 			-U lock:w:$(ISP_LOCK_FUSE_POST):m
 
+depend:
+		$(REMOVE) $(DEPS)
 clean:
 		$(REMOVE) $(LOCAL_OBJS) $(CORE_OBJS) $(LIB_OBJS) $(CORE_LIB) $(TARGETS) \
-		  	$(DEP_FILE) $(DEPS) $(USER_LIB_OBJS) $(BOARD_MK)
-
-depends:	$(DEPS)
-		cat $(DEPS) > $(DEP_FILE)
+		  	$(DEPS) $(USER_LIB_OBJS) $(BOARD_MK)
 
 size:		$(OBJDIR_STAMP) $(TARGET_ELF)
 		$(SIZE) -C --mcu=$(MCU) $(TARGET_ELF)
@@ -723,8 +695,8 @@ show_boards:
 monitor:
 		$(MONITOR_CMD) $(ARD_PORT) $(MONITOR_BAUDRATE)
 
-$(LIB_OBJS) $(CORE_OBJS) $(LOCAL_OBJS) $(USER_LIB_OBJS) $(DEPS): $(OBJDIR_STAMP) $(BOARD_MK)
+$(LIB_OBJS) $(CORE_OBJS) $(LOCAL_OBJS) $(USER_LIB_OBJS): $(OBJDIR_STAMP) $(BOARD_MK)
 
 .PHONY:	all clean depends upload raw_upload reset reset_stty size show_boards monitor
 
-include $(DEP_FILE)
+-include $(DEPS)
