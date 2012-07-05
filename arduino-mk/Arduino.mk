@@ -604,21 +604,17 @@ $(OBJDIR)/%.d: %.S
 $(OBJDIR)/%.d: %.s
 	$(CC) -MM $(CPPFLAGS) $(ASFLAGS) $< -MF $@ -MT $(@:.d=.o)
 
-# the pde -> cpp -> o file
-$(OBJDIR)/%.cpp: %.pde
-	$(ECHO) '#include "WProgram.h"' > $@
-	$(CAT)  $< >> $@
+$(OBJDIR)/%.o: %.pde
+	$(CXX) -x c++ -include WProgram.h -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
-# the ino -> cpp -> o file
-$(OBJDIR)/%.cpp: %.ino
-	$(ECHO) '#include <Arduino.h>' > $@
-	$(CAT)  $< >> $@
+$(OBJDIR)/%.d: %.pde
+	$(CXX) -x c++ -include WProgram.h -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
 
-$(OBJDIR)/%.o: $(OBJDIR)/%.cpp
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+$(OBJDIR)/%.o: %.ino
+	$(CXX) -x c++ -include Arduino.h -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
-$(OBJDIR)/%.d: $(OBJDIR)/%.cpp
-	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
+$(OBJDIR)/%.d: %.ino
+	$(CXX) -x c++ -include Arduino.h -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
 
 # core files
 $(OBJDIR)/%.o: $(ARDUINO_CORE_PATH)/%.c
