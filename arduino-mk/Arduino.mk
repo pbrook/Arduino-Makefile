@@ -394,6 +394,7 @@ world: all
 ifndef OBJDIR
 OBJDIR  	  = build-$(BOARD_TAG)
 endif
+OBJDIR_STAMP = $(OBJDIR)/stamp
 
 BOARD_MK = $(OBJDIR)/board.mk
 
@@ -422,7 +423,7 @@ ifndef USB_PID
 USB_PID = $(shell $(PARSE_BOARD_CMD) $(BOARD_TAG) build.pid)
 endif
 
-$(BOARD_MK): $(OBJDIR)
+$(BOARD_MK): $(OBJDIR_STAMP)
 	( echo VARIANT ?= $(VARIANT) ; \
 	  echo MCU ?= $(MCU) ; \
 	  echo F_CPU ?= $(F_CPU) ; \
@@ -556,19 +557,15 @@ ARD_PORT      = $(firstword $(wildcard $(ARDUINO_PORT)))
 
 # library sources
 $(OBJDIR)/libs/%.o: $(ARDUINO_LIB_PATH)/%.c
-	mkdir -p $(dir $@)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/libs/%.o: $(ARDUINO_LIB_PATH)/%.cpp
-	mkdir -p $(dir $@)
 	$(CC) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.cpp
-	mkdir -p $(dir $@)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.c
-	mkdir -p $(dir $@)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
 # normal local sources
@@ -664,10 +661,7 @@ AVRDUDE_ISP_OPTS = -P $(ISP_PORT) $(ISP_PROG)
 # Explicit targets start here
 #
 
-all: 		$(OBJDIR) $(TARGET_HEX)
-
-$(OBJDIR):
-		mkdir $(OBJDIR)
+all: 		$(TARGET_HEX)
 
 $(TARGET_ELF): 	$(LOCAL_OBJS) $(CORE_LIB) $(OTHER_OBJS)
 		$(CC) $(LDFLAGS) -o $@ $(LOCAL_OBJS) $(CORE_LIB) $(OTHER_OBJS) -lc -lm
@@ -675,7 +669,11 @@ $(TARGET_ELF): 	$(LOCAL_OBJS) $(CORE_LIB) $(OTHER_OBJS)
 $(CORE_LIB):	$(CORE_OBJS) $(LIB_OBJS) $(USER_LIB_OBJS)
 		$(AR) rcs $@ $(CORE_OBJS) $(LIB_OBJS) $(USER_LIB_OBJS)
 
-$(DEP_FILE):	$(OBJDIR) $(DEPS)
+$(OBJDIR_STAMP):
+		mkdir -p $(OBJDIR) $(patsubst %,$(OBJDIR)/libs/%,$(ARDUINO_LIBS))
+		touch $@
+
+$(DEP_FILE):	$(OBJDIR_STAMP) $(DEPS)
 		cat $(DEPS) > $(DEP_FILE)
 
 upload:		reset raw_upload
@@ -710,12 +708,13 @@ ispload:	$(TARGET_HEX)
 			-U lock:w:$(ISP_LOCK_FUSE_POST):m
 
 clean:
-		$(REMOVE) $(LOCAL_OBJS) $(CORE_OBJS) $(LIB_OBJS) $(CORE_LIB) $(TARGETS) $(DEP_FILE) $(DEPS) $(USER_LIB_OBJS)
+		$(REMOVE) $(LOCAL_OBJS) $(CORE_OBJS) $(LIB_OBJS) $(CORE_LIB) $(TARGETS) \
+		  	$(DEP_FILE) $(DEPS) $(USER_LIB_OBJS) $(BOARD_MK)
 
 depends:	$(DEPS)
 		cat $(DEPS) > $(DEP_FILE)
 
-size:		$(OBJDIR) $(TARGET_ELF)
+size:		$(OBJDIR_STAMP) $(TARGET_ELF)
 		$(SIZE) -C --mcu=$(MCU) $(TARGET_ELF)
 
 show_boards:	
@@ -723,6 +722,8 @@ show_boards:
 
 monitor:
 		$(MONITOR_CMD) $(ARD_PORT) $(MONITOR_BAUDRATE)
+
+$(LIB_OBJS) $(CORE_OBJS) $(LOCAL_OBJS) $(USER_LIB_OBJS) $(DEPS): $(OBJDIR_STAMP) $(BOARD_MK)
 
 .PHONY:	all clean depends upload raw_upload reset reset_stty size show_boards monitor
 
