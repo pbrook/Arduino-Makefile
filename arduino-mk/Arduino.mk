@@ -334,10 +334,10 @@ ifndef ARDMK_PATH
 ARDMK_PATH = $(ARDMK_DIR)/bin
 endif
 
-else
+endif
 
-echo $(error "ARDMK_DIR is not defined")
-
+ifdef ARDMK_PATH
+ARDMK_PREFIX = $(ARDMK_PATH)/
 endif
 
 ########################################################################
@@ -369,7 +369,7 @@ endif
 ########################################################################
 # Reset
 ifndef RESET_CMD
-RESET_CMD = $(ARDMK_PATH)/ard-reset-arduino $(ARD_RESET_OPTS)
+RESET_CMD = $(ARDMK_PREFIX)ard-reset-arduino $(ARD_RESET_OPTS)
 endif
 
 ########################################################################
@@ -384,7 +384,7 @@ BOARDS_TXT  = $(ARDUINO_DIR)/hardware/arduino/boards.txt
 endif
 
 ifndef PARSE_BOARD
-PARSE_BOARD = $(ARDMK_PATH)/ard-parse-boards
+PARSE_BOARD = $(ARDMK_PREFIX)ard-parse-boards
 endif
 
 ifndef PARSE_BOARD_OPTS
@@ -668,14 +668,20 @@ $(OBJDIR_STAMP): $(patsubst %,$(OBJDIR)/%/dir-stamp,core $(addprefix libs/,$(BUI
 		mkdir -p $(dir $@)
 		touch $@
 
-upload:		$(TARGET_HEX) reset raw_upload
+upload:		do_upload
 
-raw_upload:	$(TARGET_HEX)
+do_upload:	$(TARGET_HEX) reset
 		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ARD_OPTS) \
 			-U flash:w:$(TARGET_HEX):i
 
-reset:		
-		$(RESET_CMD) $(ARD_PORT)
+raw_upload:	do_upload
+raw_upload:	SKIP_RESET=true
+
+maybe_reset:		
+		$(SKIP_RESET) || $(RESET_CMD) $(ARD_PORT)
+
+SKIP_RESET = false
+reset:		maybe_reset
 
 # stty on MacOS likes -F, but on Debian it likes -f redirecting
 # stdin/out appears to work but generates a spurious error on MacOS at
@@ -712,7 +718,11 @@ show_boards:
 		$(PARSE_BOARD_CMD) --boards
 
 monitor:
-		$(MONITOR_CMD) $(ARD_PORT) $(MONITOR_BAUDRATE)
+		while ! lsusb -d 2341:8036 > /dev/null ; do sleep 0.1; done
+		picocom --imap lfcrlf --omap crlf $(ARD_PORT)
+
+um:		upload monitor
+mon:		monitor
 
 $(LIB_OBJS) $(CORE_OBJS) $(LOCAL_OBJS) $(USER_LIB_OBJS): $(OBJDIR_STAMP) $(BOARD_MK)
 
