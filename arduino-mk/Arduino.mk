@@ -297,6 +297,7 @@ ARDUINO_DIR ?= /usr/share/arduino
 ifdef ARDUINO_DIR
 
 ifndef AVR_TOOLS_DIR
+ifneq ($(wildcard $(ARDUINO_DIR)/hardware/tools/avr/bin/avr-gcc),)
 AVR_TOOLS_DIR     = $(ARDUINO_DIR)/hardware/tools/avr
 # The avrdude bundled with Arduino can't find its config
 ifndef AVRDUDE_CONF
@@ -305,7 +306,13 @@ endif
 endif
 
 ifndef AVR_TOOLS_PATH
-AVR_TOOLS_PATH    = $(AVR_TOOLS_DIR)/bin
+ifdef AVR_TOOLS_DIR
+AVR_TOOLS_PREFIX = $(AVR_TOOLS_DIR)/bin/
+else
+AVR_TOOLS_PREFIX =
+endif
+else
+AVR_TOOLS_PREFIX = $(AVR_TOOLS_PATH)/
 endif
 
 ARDUINO_LIB_PATH  = $(ARDUINO_DIR)/libraries
@@ -506,13 +513,13 @@ TARGETS    = $(OBJDIR)/$(TARGET).*
 CORE_LIB   = $(OBJDIR)/libcore.a
 
 # Names of executables
-CC      = $(AVR_TOOLS_PATH)/avr-gcc
-CXX     = $(AVR_TOOLS_PATH)/avr-g++
-OBJCOPY = $(AVR_TOOLS_PATH)/avr-objcopy
-OBJDUMP = $(AVR_TOOLS_PATH)/avr-objdump
-AR      = $(AVR_TOOLS_PATH)/avr-ar
-SIZE    = $(AVR_TOOLS_PATH)/avr-size
-NM      = $(AVR_TOOLS_PATH)/avr-nm
+CC      = $(AVR_TOOLS_PREFIX)avr-gcc
+CXX     = $(AVR_TOOLS_PREFIX)avr-g++
+OBJCOPY = $(AVR_TOOLS_PREFIX)avr-objcopy
+OBJDUMP = $(AVR_TOOLS_PREFIX)avr-objdump
+AR      = $(AVR_TOOLS_PREFIX)avr-ar
+SIZE    = $(AVR_TOOLS_PREFIX)avr-size
+NM      = $(AVR_TOOLS_PREFIX)avr-nm
 REMOVE  = rm -f
 MV      = mv -f
 CAT     = cat
@@ -625,7 +632,7 @@ $(OBJDIR)/%.sym: $(OBJDIR)/%.elf
 # Avrdude
 #
 ifndef AVRDUDE
-AVRDUDE          = $(AVR_TOOLS_PATH)/avrdude
+AVRDUDE          = $(AVR_TOOLS_PREFIX)avrdude
 endif
 
 AVRDUDE_COM_OPTS = -q -V -p $(MCU)
