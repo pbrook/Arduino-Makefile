@@ -661,7 +661,7 @@ $(OBJDIR_STAMP): $(patsubst %,$(OBJDIR)/%/dir-stamp,core $(addprefix libs/,$(BUI
 		mkdir -p $(dir $@)
 		touch $@
 
-upload:		reset raw_upload
+upload:		$(TARGET_HEX) reset raw_upload
 
 raw_upload:	$(TARGET_HEX)
 		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ARD_OPTS) \
