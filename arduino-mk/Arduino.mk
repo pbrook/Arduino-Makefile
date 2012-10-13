@@ -287,7 +287,7 @@ endif
 #
 # Arduino version number
 ifndef ARDUINO_VERSION
-ARDUINO_VERSION = 100
+ARDUINO_VERSION = 101
 endif
 
 ########################################################################
@@ -316,8 +316,8 @@ AVR_TOOLS_PREFIX = $(AVR_TOOLS_PATH)/
 endif
 
 ARDUINO_LIB_PATH  = $(ARDUINO_DIR)/libraries
-ARDUINO_CORE_PATH = $(ARDUINO_DIR)/hardware/arduino/cores/arduino
-ARDUINO_VAR_PATH  = $(ARDUINO_DIR)/hardware/arduino/variants
+ARDUINO_CORE_PATH ?= $(ARDUINO_DIR)/hardware/arduino/cores/arduino
+ARDUINO_VAR_PATH  ?= $(ARDUINO_DIR)/hardware/arduino/variants
 
 else
 
@@ -547,8 +547,9 @@ USER_LIB_OBJS = $(patsubst $(USER_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(USER_LIB_
 CPPFLAGS      = -mmcu=$(MCU) -DF_CPU=$(F_CPU) -DARDUINO=$(ARDUINO_VERSION) \
 			-DUSB_VID=$(USB_VID) -DUSB_PID=$(USB_PID) \
 			-I. -I$(ARDUINO_CORE_PATH) -I$(ARDUINO_VAR_PATH)/$(VARIANT) \
-			-g -Os -w -Wall \
+			-g -Os -Wall \
 			-ffunction-sections -fdata-sections
+			#-g -Os -w -Wall
 LOCAL_CPPFLAGS= $(CPPFLAGS) $(filter-out %/utility,$(SYS_INCLUDES) $(USER_INCLUDES))
 CFLAGS        = -std=gnu99
 CXXFLAGS      = -fno-exceptions
