@@ -567,8 +567,8 @@ ARD_PORT      = $(firstword $(wildcard $(ARDUINO_PORT)))
 # easy to change the build options in future
 
 get_lib_include = $(addprefix -I,$(call lib_maybe_utility,$(1)/$(notdir $(patsubst %/utility,%,$(patsubst %/,%,$(dir $(2)))))))
-USER_LIB_CPPFLAGS = $(CPPFLAGS) $(call get_lib_include,$(USER_LIB_PATH),$@)
-ARDUINO_LIB_CPPFLAGS = $(CPPFLAGS) $(call get_lib_include,$(ARDUINO_LIB_PATH),$@)
+USER_LIB_CPPFLAGS = $(LOCAL_CPPFLAGS) $(call get_lib_include,$(USER_LIB_PATH),$@)
+ARDUINO_LIB_CPPFLAGS = $(LOCAL_CPPFLAGS) $(call get_lib_include,$(ARDUINO_LIB_PATH),$@)
 # library sources
 $(OBJDIR)/libs/%.o: $(ARDUINO_LIB_PATH)/%.c
 	$(CC) -c $(ARDUINO_LIB_CPPFLAGS) $(CFLAGS) $< -o $@
