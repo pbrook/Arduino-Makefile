@@ -287,14 +287,13 @@ endif
 #
 # Arduino version number
 ifndef ARDUINO_VERSION
-ARDUINO_VERSION = 101
+ARDUINO_VERSION = 105
 endif
 
 ########################################################################
 # Arduino and system paths
 #
 ARDUINO_DIR ?= /usr/share/arduino
-ifdef ARDUINO_DIR
 
 ifndef AVR_TOOLS_DIR
 ifneq ($(wildcard $(ARDUINO_DIR)/hardware/tools/avr/bin/avr-gcc),)
@@ -719,7 +718,7 @@ show_boards:
 		$(PARSE_BOARD_CMD) --boards
 
 monitor:
-		while ! lsusb -d 2341:8036 > /dev/null ; do sleep 0.1; done
+		wait_tty $(ARD_PORT)
 		picocom --imap lfcrlf --omap crlf $(ARD_PORT)
 
 um:		upload monitor
