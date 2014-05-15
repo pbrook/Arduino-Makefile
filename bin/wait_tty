@@ -1,0 +1,8 @@
+#! /bin/sh
+
+set -e
+
+node=${1:-/dev/ttyACM0}
+usbid=${2:-2341:8036}
+while ! lsusb -d $usbid > /dev/null ; do sleep 0.1; done
+while ! test -w $node ; do sleep 0.1; done
