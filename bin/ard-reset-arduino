@@ -10,5 +10,6 @@ fi
 #while ! lsusb -d 2341:8036 > /dev/null ; do sleep 0.1; done
 old=$($stty -g | sed -e 's/:cb9:/:cbd:/')
 $stty 1200
+sleep 1
 wait_tty $1 2341:0036
 $stty $old 2>/dev/null || true
